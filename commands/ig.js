@@ -5,6 +5,6 @@ module.exports = {
 		.setName('ig')
 		.setDescription('Send our instagram url'),
 	async execute(interaction) {
-		await interaction.reply('Náš IG: https://www.instagram.com/jaknaweby');
+		await interaction.reply('Náš IG: https://www.instagram.com/jaknaweby/');
 	},
 };
