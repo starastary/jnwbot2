@@ -1,5 +1,37 @@
 {
     "token": "",
     "clientId": "",
-    "guildId": ""
+    "guildId": "",
+    "botCount": ,
+    "channels": {
+        "welcome": "",
+        "adminLog": "",
+        "membersNum": "",
+        "botsNum": "",
+        "languages": "",
+        "bump": "",
+        "newVideos": "",
+        "newPosts": ""
+    },
+    "rolesId": {
+        "owner": "",
+        "staff": "",
+        "developer": "",
+        "helper": "",
+        "member": "",
+        "bump": "",
+        "newVideos": "",
+        "newPosts": ""
+    },
+    "colors": {
+        "embedInfoColor": "",
+        "embedDangerColor": "",
+        "embedWarnColor": ""
+    },
+    "db": {
+        "host": "",
+        "port": "",
+        "user": "",
+        "password": ""
+    }
 }

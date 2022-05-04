@@ -5,6 +5,9 @@ module.exports = {
 		.setName('web')
 		.setDescription('Send our web url'),
 	async execute(interaction) {
-		await interaction.reply('Náš web: https://jaknaweby.eu/');
+		await interaction.reply({
+			content: 'Náš web: https://jaknaweby.eu/ !',
+			ephemeral: true,
+		});
 	},
 };
