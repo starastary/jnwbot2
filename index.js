@@ -55,7 +55,8 @@ for (const file of eventFiles) {
 client.once('ready', () => {
 	log("Discord", `Bot is online!`)
 	setInterval(updateChannelNames, (5*60*1000))
-	setInterval(updateSocials, (30*1000))
+	setInterval(updateSocials, (60*60*1000))
+	setInterval(bumpReminder, (3*60*60*1000))
 });
 
 client.on('interactionCreate', async interaction => {
@@ -247,6 +248,11 @@ var con = mysql.createConnection({
 		data.push(i.ig_id)
 	  })
 	  return data
+  }
+
+  const bumpReminder = () => {
+	const guild = client.guilds.cache.get(config.guildId);
+	guild.channels.cache.get(config.channels.bump).send(`⁣<@&${config.rolesId.bump}>⁣\n\nIsn't it possible to bump again?\nTry it using \`/bump\`!`)
   }
 
   const log = (type, message) => {
