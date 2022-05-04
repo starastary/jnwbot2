@@ -33,5 +33,9 @@
         "port": "",
         "user": "",
         "password": ""
+    },
+    "apiKeys": {
+        "yt": "",
+        "ig": ""
     }
 }

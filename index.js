@@ -55,7 +55,7 @@ for (const file of eventFiles) {
 client.once('ready', () => {
 	log("Discord", `Bot is online!`)
 	setInterval(updateChannelNames, (5*60*1000))
-	perms()
+	setInterval(updateSocials, (30*1000))
 });
 
 client.on('interactionCreate', async interaction => {
@@ -118,22 +118,25 @@ var con = mysql.createConnection({
   
   const updateSocials = async () => {
 	log("Socials", `Updating socials`)
+	  const guild = client.guilds.cache.get(config.guildId);
+
 	  const videos = await getYoutube();
 	  const savedVideos = await getSavedVideos();
 	  const newVideos = videos.filter(i => !savedVideos.includes(i.yt_id))
+
 	  await newVideos.forEach(async (video) => {
 		await ins_yt(video.yt_id, video.title, video.description, video.thumbnail, video.link, video.link, video.timestamp)
-		guild.channels.cache.get(config.channels.newVideos).send(`⁣<@&${config.rolesId.newVideos}>⁣\n\nVe 21:00 začíná premiéra videa ze série JavaScript kurzu!\n\n${video.yt_link}`)
+		guild.channels.cache.get(config.channels.newVideos).send(`⁣<@&${config.rolesId.newVideos}>⁣\n\nNa našem youtube právě vyšlo nové video!\n\n${video.link}`)
 	  })
   
 	  const posts = await getInstagram();
 	  const savedPosts = await getSavedPosts();
 	  const newPosts = posts.filter(i => !savedPosts.includes(i.ig_id))
+
 	  await newPosts.forEach(async (post) => {
 		await ins_ig(post.ig_id, post.description, post.thumbnail, post.link, post.link, post.timestamp)
-		guild.channels.cache.get(config.channels.newPosts).send(`⁣<@&${config.rolesId.newPosts}>⁣\n\nNa IG profilu @jaknaweby vyšel nový příspěvek! Jděte se mrknout!\n\n${post.ig_link}`)
+		guild.channels.cache.get(config.channels.newPosts).send(`⁣<@&${config.rolesId.newPosts}>⁣\n\nNa IG profilu @jaknaweby vyšel nový příspěvek! Jděte se mrknout!\n\n${post.link}`)
 	  })
-	  log("Socials", `Updating socials done`)
   }
   
   //decodeURIComponent(escape(""));
@@ -146,7 +149,7 @@ var con = mysql.createConnection({
 		  maxResults: 10,
 		  order: 'date',
 		  type: 'video',
-		  key: 'AIzaSyAZCsfB5vohICfZTTtNfcqVivFpPZg6_2o'
+		  key: config.apiKeys.yt
 		}
 	  })
 	
@@ -174,7 +177,7 @@ var con = mysql.createConnection({
 	const getInstagram = async () => {
 	  let data = [];
 		
-	  var result = await axios.get("https://graph.instagram.com/me/media?fields=caption,id,media_type,media_url,permalink,thumbnail_url,timestamp,username&access_token=IGQVJYXzQ0NDhmMmxtX1R6MHRwYTlzLW9qRG1QTG4tbzFYOThaUUh4Sy1MZAHZAlb3FmbUplYmhSazIyR2x5aWRacXFvbDBXRWo2NlljdEtMQmdJZAFFKNEVqMS1tNE9pQkFZASWlWU0FOOExMRDdaQk1xYwZDZD&limit=10", {
+	  var result = await axios.get(`https://graph.instagram.com/me/media?fields=caption,id,media_type,media_url,permalink,thumbnail_url,timestamp,username&access_token=${config.apiKeys.ig}&limit=10`, {
 		headers: {},
 		params: {}
 	  })
