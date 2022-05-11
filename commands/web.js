@@ -4,7 +4,7 @@ module.exports = {
 	data: new SlashCommandBuilder()
 		.setName('web')
 		.setDescription('Send our web url'),
-	async execute(interaction) {
+	async execute(client, interaction) {
 		await interaction.reply({
 			content: 'Náš web: https://jaknaweby.eu/ !',
 			ephemeral: true,
