@@ -89,11 +89,8 @@ let started = false
 
 client.once('ready', () => {
 	log("Discord", `Bot is online!`)
-	started = true
-	setInterval(updateChannelNames, (5 * 60 * 1000))
-	setInterval(updateSocials, (20 * 60 * 1000))
-	setInterval(checkBump, (5 * 60 * 1000))
-	setInterval(heartbeat, (20 * 1000))
+	setInterval(updateChannelNames, (5*60*1000))
+	setInterval(updateSocials, (30*1000))
 });
 
 client.on('interactionCreate', async interaction => {
@@ -289,48 +286,11 @@ const getSavedPosts = async () => {
 	let data = [];
 	result.forEach((i) => {
 		data.push(i.ig_id)
-	})
-	return data
-}
+	  })
+	  return data
+  }
 
-let sendedBumpReminder = false;
-
-const checkBump = async () => {
-	const disboardUrl = "https://disboard.org/server/761880306230886412";
-
-	fetchData(disboardUrl).then((res) => {
-
-		const html = res.data;
-		const $ = cheerio.load(html);
-		const lastBump = $('.server-bumped-at').text().split(' ');
-		if ((lastBump[1] >= 2 && lastBump[2] === 'hours') || (lastBump[1] >= 1 && lastBump[2] === 'days') || (lastBump[1] >= 1 && lastBump[2] === 'day')) {
-			if (!sendedBumpReminder) {
-				const guild = client.guilds.cache.get(config.guildId);
-				guild.channels.cache.get(config.channels.bump).send(`⁣<@&${config.rolesId.bump}>⁣\n\nJe opět možné bumpnout server!\nPoužij: \`/bump\`!`)
-				log("Discord", `Sending bump reminder`)
-				sendedBumpReminder = true;
-			}
-		} else {
-			sendedBumpReminder = false
-		}
-	})
-
-
-}
-
-async function fetchData(url) {
-	// make http call to url
-	let response = await axios(url).catch((err) => console.log(err));
-
-	if (response.status !== 200) {
-		console.log("Error occurred while fetching data");
-		return;
-	}
-	return response;
-}
-
-
-const log = (type, message) => {
+  const log = (type, message) => {
 	sql = `INSERT INTO logs (type, message, timestamp) VALUES (${con.escape(type)}, ${con.escape(message)}, current_timestamp());`
 	result = query(sql)
 	const guild = client.guilds.cache.get(config.guildId);
