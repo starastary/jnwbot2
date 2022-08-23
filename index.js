@@ -7,6 +7,7 @@ const config = require('./config.json');
 const res = require('express/lib/response');
 var mysql = require('mysql');
 const axios = require('axios');
+const cheerio = require('cheerio');
 var encoder = new TextEncoder;
 const betterConsole = require("./betterConsole");
 
@@ -41,7 +42,7 @@ for (const file of commandFiles) {
 	client.commands.set(command.data.name, command);
 }
 
-const eventFiles = fs.readdirSync('./events').filter(file => file.endsWith('.js'));
+/* const eventFiles = fs.readdirSync('./events').filter(file => file.endsWith('.js'));
 
 for (const file of eventFiles) {
 	const event = require(`./events/${file}`);
@@ -50,7 +51,39 @@ for (const file of eventFiles) {
 	} else {
 		client.on(event.name, (...args) => event.execute(client, ...args));
 	}
-}
+} */
+
+client.on("guildMemberAdd", function(member){
+
+	log("Discord", `${member.user.username} has join the server`)
+	const guild = member.guild;
+
+	let countmem = +guild.memberCount - config.botCount;
+
+	guild.channels.cache.get(config.channels.welcome).send(`${member.user} se připojil! Nyní máme ${countmem} členů! :heart:\nNastav si tvé oblíbené programovací jazyky a oznámení v <#${config.channels.languages}>!`)
+
+	const membersNumChan = guild.channels.cache.get(config.channels.membersNum)
+	const botsNumChan = guild.channels.cache.get(config.channels.botsNum)
+	
+	membersNumChan.setName(`🧑┋Members: ${countmem}`)
+	botsNumChan.setName(`🤖┋Bots: ${config.botCount}`)
+});
+
+client.on("guildMemberRemove", function(member){
+
+	log("Discord", `${member.user.username} has left the server`)
+	const guild = client.guilds.cache.get(config.guildId);
+	let countmem = +guild.memberCount - config.botCount;
+
+	guild.channels.cache.get(config.channels.welcome).send(`@${member.user.username} nás opustil. Nyní máme pouze ${countmem} členů :pleading_face:`)
+
+	const membersNumChan = guild.channels.cache.get(config.channels.membersNum)
+	const botsNumChan = guild.channels.cache.get(config.channels.botsNum)
+	
+	membersNumChan.setName(`🧑┋Members: ${countmem}`)
+	botsNumChan.setName(`🤖┋Bots: ${config.botCount}`)
+});
+
 
 let started = false
 
@@ -58,8 +91,9 @@ client.once('ready', () => {
 	log("Discord", `Bot is online!`)
 	started = true
 	setInterval(updateChannelNames, (5 * 60 * 1000))
-	setInterval(updateSocials, (60 * 60 * 1000))
-	setInterval(bumpReminder, (3 * 60 * 60 * 1000))
+	setInterval(updateSocials, (20 * 60 * 1000))
+	setInterval(checkBump, (5 * 60 * 1000))
+	setInterval(heartbeat, (20 * 1000))
 });
 
 client.on('interactionCreate', async interaction => {
@@ -75,7 +109,7 @@ client.on('interactionCreate', async interaction => {
 		await command.execute(client, interaction);
 	} catch (e) {
 		log("Discord Error", `Command ${command.data.name} in #${interaction.channel.name} FAILED, error:\n${e}`)
-		await interaction.reply({ content: 'There was an error while executing this command!', ephemeral: true });
+		await interaction.reply({ content: 'Něco se rozbilo :/!', ephemeral: true });
 	}
 });
 
@@ -101,15 +135,16 @@ const updateChannelNames = () => {
 	const membersNumChan = guild.channels.cache.get(config.channels.membersNum)
 	const botsNumChan = guild.channels.cache.get(config.channels.botsNum)
 
-	membersNumChan.setName(`「🙋」Members: ${countmem}`)
-	botsNumChan.setName(`「🤖」 Bots: ${config.botCount}`)
+	membersNumChan.setName(`🧑┋Members: ${countmem}`)
+	botsNumChan.setName(`🤖┋Bots: ${config.botCount}`)
 
 }
 
 var con = mysql.createConnection({
 	host: config.db.host,
 	user: config.db.user,
-	password: config.db.password
+	password: config.db.password,
+	charset: "utf8mb4"
 });
 
 con.connect(function (err) {
@@ -141,7 +176,7 @@ const updateSocials = async () => {
 
 		await newPosts.forEach(async (post) => {
 			await ins_ig(post.ig_id, post.description, post.thumbnail, post.link, post.link, post.timestamp)
-			guild.channels.cache.get(config.channels.log).send(`⁣<@&${config.rolesId.newPosts}>⁣\n\nNa IG profilu @jaknaweby vyšel nový příspěvek! Jděte se mrknout!\n\n${post.link}`)
+			guild.channels.cache.get(config.channels.newPosts).send(`⁣<@&${config.rolesId.newPosts}>⁣\n\nNa IG profilu @jaknaweby vyšel nový příspěvek! Jděte se mrknout!\n\n${post.link}`)
 		})
 	} catch (e) {
 		log("Error", `Updating posts failed, error: \n${e}`)
@@ -211,13 +246,13 @@ const getInstagram = async () => {
 const query = async (sql) => {
 	return new Promise((resolve, reject) => {
 		con.query("USE c6jaknaweby", function (err, result) {
-			if (err) throw err;
+			if (err) reject(err);
 		});
 
 		//betterConsole.log('MySQL query', sql, "cyan");
 
 		con.query(sql, (err, result) => {
-			if (err) throw err;
+			if (err) reject(err);
 			resolve(result)
 		});
 
@@ -258,11 +293,42 @@ const getSavedPosts = async () => {
 	return data
 }
 
-const bumpReminder = () => {
-	const guild = client.guilds.cache.get(config.guildId);
-	guild.channels.cache.get(config.channels.bump).send(`⁣<@&${config.rolesId.bump}>⁣\n\nIsn't it possible to bump again?\nTry it using \`/bump\`!`)
-	log("Discord", `Sending bump reminder`)
+let sendedBumpReminder = false;
+
+const checkBump = async () => {
+	const disboardUrl = "https://disboard.org/server/761880306230886412";
+
+	fetchData(disboardUrl).then((res) => {
+
+		const html = res.data;
+		const $ = cheerio.load(html);
+		const lastBump = $('.server-bumped-at').text().split(' ');
+		if ((lastBump[1] >= 2 && lastBump[2] === 'hours') || (lastBump[1] >= 1 && lastBump[2] === 'days') || (lastBump[1] >= 1 && lastBump[2] === 'day')) {
+			if (!sendedBumpReminder) {
+				const guild = client.guilds.cache.get(config.guildId);
+				guild.channels.cache.get(config.channels.bump).send(`⁣<@&${config.rolesId.bump}>⁣\n\nJe opět možné bumpnout server!\nPoužij: \`/bump\`!`)
+				log("Discord", `Sending bump reminder`)
+				sendedBumpReminder = true;
+			}
+		} else {
+			sendedBumpReminder = false
+		}
+	})
+
+
 }
+
+async function fetchData(url) {
+	// make http call to url
+	let response = await axios(url).catch((err) => console.log(err));
+
+	if (response.status !== 200) {
+		console.log("Error occurred while fetching data");
+		return;
+	}
+	return response;
+}
+
 
 const log = (type, message) => {
 	sql = `INSERT INTO logs (type, message, timestamp) VALUES (${con.escape(type)}, ${con.escape(message)}, current_timestamp());`
@@ -283,4 +349,18 @@ const log = (type, message) => {
 		started ? guild.channels.cache.get(config.channels.log).send(`LOG: ${type} - ${message}⁣`) : ""
 	}
 
+}
+
+const heartbeat = async () => {
+	sql = 'SELECT 1;'
+	try {
+		const result = await query(sql)
+		console.log(result)
+	} catch (e) {
+		log("Error", `Heartbeat failed, error ${e}`)
+		con.connect(function (err) {
+			if (err) throw err;
+			log("DB", `Connected`)
+		});
+	}
 }
